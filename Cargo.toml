@@ -1,0 +1,8 @@
+[package]
+name = "bevy_fixed_viewport"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy = "0.14.2"
+itertools = "0.13.0"
