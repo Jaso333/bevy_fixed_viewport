@@ -68,7 +68,7 @@ fn sync_viewport(
 ) {
     for event in sync_events.read() {
         // resolve the required data for the syncing
-        let (window, fixed_viewport, mut camera) = match event {
+        let (window, mut cameras) = match event {
             // the event came from the camera, find the matching window
             SyncEvent::Camera(entity) => match camera_query.get_mut(*entity) {
                 Ok((fixed_viewport, camera)) => (
@@ -90,8 +90,7 @@ fn sync_viewport(
                         },
                         _ => continue,
                     },
-                    fixed_viewport,
-                    camera,
+                    vec![(fixed_viewport, camera)],
                 ),
                 Err(_) => continue,
             },
@@ -103,51 +102,54 @@ fn sync_viewport(
                     Err(_) => continue,
                 };
 
-                // find the matching camera
-                match camera_query
-                    .iter_mut()
-                    .find_map(|(fixed_viewport, camera)| match camera.target {
-                        RenderTarget::Window(window_ref) => match window_ref {
-                            WindowRef::Primary => match primary_window {
-                                Some(_) => Some((fixed_viewport, camera)),
-                                None => None,
+                // find all matching cameras
+                (
+                    window,
+                    camera_query
+                        .iter_mut()
+                        .filter_map(|(fixed_viewport, camera)| match camera.target {
+                            RenderTarget::Window(window_ref) => match window_ref {
+                                WindowRef::Primary => match primary_window {
+                                    Some(_) => Some((fixed_viewport, camera)),
+                                    None => None,
+                                },
+                                WindowRef::Entity(ref_entity) => match ref_entity == *entity {
+                                    true => Some((fixed_viewport, camera)),
+                                    false => None,
+                                },
                             },
-                            WindowRef::Entity(ref_entity) => match ref_entity == *entity {
-                                true => Some((fixed_viewport, camera)),
-                                false => None,
-                            },
-                        },
-                        _ => None,
-                    }) {
-                    Some((fixed_viewport, camera)) => (window, fixed_viewport, camera),
-                    None => continue,
-                }
+                            _ => None,
+                        })
+                        .collect(),
+                )
             }
         };
 
-        // get the required data
-        let window_width = window.physical_width() as f32;
-        let window_height = window.physical_height() as f32;
-        let window_ratio = window_width / window_height;
-        let mut viewport_width = window_width;
-        let mut viewport_height = window_height;
-        let mut viewport_x = 0f32;
-        let mut viewport_y = 0f32;
+        for (fixed_viewport, camera) in cameras.iter_mut() {
+            // get the required data
+            let window_width = window.physical_width() as f32;
+            let window_height = window.physical_height() as f32;
+            let window_ratio = window_width / window_height;
+            let mut viewport_width = window_width;
+            let mut viewport_height = window_height;
+            let mut viewport_x = 0f32;
+            let mut viewport_y = 0f32;
 
-        // determine the best fit for the given aspect ratio
-        if window_ratio > fixed_viewport.aspect_ratio {
-            viewport_width = viewport_height * fixed_viewport.aspect_ratio;
-            viewport_x = window_width / 2. - viewport_width / 2.;
-        } else {
-            viewport_height = viewport_width / fixed_viewport.aspect_ratio;
-            viewport_y = window_height / 2. - viewport_height / 2.;
+            // determine the best fit for the given aspect ratio
+            if window_ratio > fixed_viewport.aspect_ratio {
+                viewport_width = viewport_height * fixed_viewport.aspect_ratio;
+                viewport_x = window_width / 2. - viewport_width / 2.;
+            } else {
+                viewport_height = viewport_width / fixed_viewport.aspect_ratio;
+                viewport_y = window_height / 2. - viewport_height / 2.;
+            }
+
+            // update the viewport accordingly
+            camera.viewport = Some(Viewport {
+                physical_position: UVec2::new(viewport_x as u32, viewport_y as u32),
+                physical_size: UVec2::new(viewport_width as u32, viewport_height as u32),
+                ..default()
+            });
         }
-
-        // update the viewport accordingly
-        camera.viewport = Some(Viewport {
-            physical_position: UVec2::new(viewport_x as u32, viewport_y as u32),
-            physical_size: UVec2::new(viewport_width as u32, viewport_height as u32),
-            ..default()
-        });
     }
 }
