@@ -31,7 +31,7 @@ enum SyncEvent {
 }
 
 /// Attach this to a camera make the viewport fit the available window space with a fixed aspect ratio.
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct FixedViewport {
     pub aspect_ratio: f32,
 }
