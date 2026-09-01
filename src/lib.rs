@@ -4,22 +4,33 @@ use bevy::{
     window::PrimaryWindow,
 };
 
-pub struct FixedViewportPlugin;
-
-impl Plugin for FixedViewportPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(PostUpdate, update_viewports.in_set(FixedViewportSystems));
-    }
+pub mod prelude {
+    pub use crate::{FixedViewport, FixedViewportPlugin, FixedViewportSystems};
 }
 
+/// Contains the fixed viewport functionality within the assigned schedule.
 #[derive(SystemSet, Hash, Debug, Clone, PartialEq, Eq)]
 pub struct FixedViewportSystems;
 
+/// Attach this to a camera to enforce a fixed viewport of a given aspect ratio.
 #[derive(Component, Clone, Default)]
 pub struct FixedViewport {
     pub aspect_ratio: f32,
 }
 
+/// Adds fixed viewport functionality to the app.
+pub struct FixedViewportPlugin;
+
+impl Plugin for FixedViewportPlugin {
+    fn build(&self, app: &mut App) {
+        // The pre-update schedule is selected as it is more likely that something within update or post-update will want to
+        // adjust something based on the viewport; for example some complex UI behaviour.
+        // It is also assumed that window changes happen prior to anything in first/pre-update/etc.
+        app.add_systems(PreUpdate, update_viewports.in_set(FixedViewportSystems));
+    }
+}
+
+/// Updates viewport according to the fixed viewport configuration.
 fn update_viewports(
     mut camera_query: Query<(Ref<FixedViewport>, Ref<RenderTarget>, &mut Camera)>,
     window_query: Query<(Ref<Window>, Has<PrimaryWindow>)>,
