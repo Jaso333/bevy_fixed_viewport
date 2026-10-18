@@ -1,7 +1,8 @@
 use bevy::{
     camera::{RenderTarget, Viewport},
+    platform::collections::HashSet,
     prelude::*,
-    window::PrimaryWindow,
+    window::{PrimaryWindow, WindowRef, WindowResized},
 };
 
 pub mod prelude {
@@ -33,28 +34,40 @@ impl Plugin for FixedViewportPlugin {
 /// Updates viewport according to the fixed viewport configuration.
 fn update_viewports(
     mut camera_query: Query<(Ref<FixedViewport>, Ref<RenderTarget>, &mut Camera)>,
-    window_query: Query<(Ref<Window>, Has<PrimaryWindow>)>,
+    window_query: Query<(Entity, &Window, Option<Ref<PrimaryWindow>>)>,
+    mut messages: MessageReader<WindowResized>,
 ) {
+    let changed_windows = messages.read().map(|m| m.window).collect::<HashSet<_>>();
+
     for (fixed_viewport, render_target, mut camera) in camera_query.iter_mut() {
         // find the window that the camera renders to
-        let window = match render_target.into_inner() {
+        let (window_entity, window, mut window_changed) = match render_target.into_inner() {
             RenderTarget::Window(window_ref) => match window_ref {
-                bevy::window::WindowRef::Primary => {
-                    match window_query.iter().find(|(_, primary)| *primary) {
-                        Some((window, _)) => window,
+                WindowRef::Primary => {
+                    match window_query
+                        .iter()
+                        .find(|(window_entity, _, primary)| primary.is_some())
+                    {
+                        // account for the possibility that the window has just been made primary
+                        Some((window_entity, window, primary)) => {
+                            (window_entity, window, primary.unwrap().is_added())
+                        }
                         None => continue,
                     }
                 }
-                bevy::window::WindowRef::Entity(entity) => match window_query.get(*entity) {
-                    Ok((window, ..)) => window,
+                WindowRef::Entity(window_entity) => match window_query.get(*window_entity) {
+                    Ok((window_entity, window, ..)) => (window_entity, window, false),
                     Err(_) => continue,
                 },
             },
             _ => continue, // non-window targets not supported
         };
 
+        // check the events about this window
+        window_changed = window_changed || changed_windows.contains(&window_entity);
+
         // skip if nothing changed
-        if !window.is_changed() && !fixed_viewport.is_changed() && !render_target.is_changed() {
+        if !window_changed && !fixed_viewport.is_changed() && !render_target.is_changed() {
             continue;
         }
 
@@ -71,6 +84,8 @@ fn update_viewports(
 
         let x = window_width / 2.0 - width / 2.0;
         let y = window_height / 2.0 - height / 2.0;
+
+        println!("RSZ");
 
         camera.viewport = Some(Viewport {
             physical_position: UVec2::new(x as u32, y as u32),
