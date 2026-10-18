@@ -85,8 +85,6 @@ fn update_viewports(
         let x = window_width / 2.0 - width / 2.0;
         let y = window_height / 2.0 - height / 2.0;
 
-        println!("RSZ");
-
         camera.viewport = Some(Viewport {
             physical_position: UVec2::new(x as u32, y as u32),
             physical_size: UVec2::new(width as u32, height as u32),
