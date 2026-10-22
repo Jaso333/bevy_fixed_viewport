@@ -2,6 +2,19 @@
 name = "bevy_fixed_viewport"
 version = "0.1.0"
 edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "Adds capability for a dynamic fixed viewport in the Bevy game engine."
+repository = "https://github.com/Jaso333/bevy_fixed_viewport"
+readme = "README.md"
+keywords = ["bevy", "viewport"]
 
 [dependencies]
-bevy = "0.20.0"
+bevy_app = { version = "0.20", default-features = false, features = ["std"] }
+bevy_ecs = { version = "0.20", default-features = false, features = ["std"] }
+bevy_window = { version = "0.20", default-features = false, features = ["std"] }
+bevy_camera = { version = "0.20", default-features = false }
+bevy_math = { version = "0.20", default-features = false, features = ["std"] }
+
+[dev-dependencies]
+bevy = "0.20"
+bevy_fixed_viewport = { path = "." }

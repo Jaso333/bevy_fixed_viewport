@@ -1,13 +1,10 @@
-use bevy::{
-    camera::{RenderTarget, Viewport},
-    platform::collections::HashSet,
-    prelude::*,
-    window::{PrimaryWindow, WindowRef, WindowResized},
-};
+use std::collections::HashSet;
 
-pub mod prelude {
-    pub use crate::{FixedViewport, FixedViewportPlugin, FixedViewportSystems};
-}
+use bevy_app::prelude::*;
+use bevy_camera::{RenderTarget, Viewport, prelude::*};
+use bevy_ecs::prelude::*;
+use bevy_math::prelude::*;
+use bevy_window::{PrimaryWindow, WindowRef, WindowResized, prelude::*};
 
 /// Contains the fixed viewport functionality within the assigned schedule.
 #[derive(SystemSet, Hash, Debug, Clone, PartialEq, Eq)]
@@ -16,6 +13,7 @@ pub struct FixedViewportSystems;
 /// Attach this to a camera to enforce a fixed viewport of a given aspect ratio.
 #[derive(Component, Clone, Default)]
 pub struct FixedViewport {
+    /// The aspect ratio to maintain (width / height).
     pub aspect_ratio: f32,
 }
 
@@ -46,7 +44,7 @@ fn update_viewports(
                 WindowRef::Primary => {
                     match window_query
                         .iter()
-                        .find(|(window_entity, _, primary)| primary.is_some())
+                        .find(|(_, _, primary)| primary.is_some())
                     {
                         // account for the possibility that the window has just been made primary
                         Some((window_entity, window, primary)) => {
@@ -88,7 +86,7 @@ fn update_viewports(
         camera.viewport = Some(Viewport {
             physical_position: UVec2::new(x as u32, y as u32),
             physical_size: UVec2::new(width as u32, height as u32),
-            ..default()
+            ..Default::default()
         });
     }
 }
